@@ -1,7 +1,14 @@
 \section{Low-Compute Benchmark and Experiments}
 
 \paragraph{Environments.}
-The benchmark uses four deterministic CPU environments. The point mass is a positive control with $J=I$. The nonholonomic car exposes sideways visual futures that are locally impossible. The two-link arm uses an analytic end-effector Jacobian and action limits. The planar pusher has a contact-dependent Jacobian, so object motion before contact is non-actionable.
+The benchmark uses four deterministic CPU environments. The point mass is a positive control with $J=I$. The nonholonomic car exposes sideways visual futures that are locally impossible. The two-link arm uses an end-effector Jacobian and action limits. The planar pusher has a contact-dependent Jacobian, so object motion before contact is non-actionable.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.94\linewidth]{figures/fig2_learned_j_interface.pdf}
+\caption{The learned action map is central, not an afterthought. Small exploratory rollouts fit $J_\phi$, and the same map is used for inverse action, failure diagnosis, and future repair.}
+\label{fig:learned-interface}
+\end{figure}
 
 \begin{figure}[t]
 \centering
@@ -16,8 +23,8 @@ We use controlled future generators rather than large video models: straight-lin
 \paragraph{Experiment 1: constructive counterexample.}
 The car example in Proposition 1 is implemented directly. A sideways future has the same endpoint smoothness as a forward future under passive scoring, but the residual rejects it because the displacement lies outside the car's local tangent set.
 
-\paragraph{Experiment 2: failure prediction.}
-For each candidate, we compute residuals, recover controls, roll out the true environment, and mark failure when the executed path diverges from the imagined path. Table~\ref{tab:failure} reports the actionability score. In the saved CSVs, it is compared to smoothness, path length, action norm, passive negative log-likelihood proxy, and random score.
+\paragraph{Experiment 2: failure prediction with hostile baselines.}
+For each candidate, we compute residuals, recover controls, roll out the true environment, and mark failure when the executed path diverges from the imagined path. We compare analytic actionability, learned-J actionability, noisy learned-J actionability, wrong-map residual, inverse-dynamics reconstruction error, a learned classifier, a forward-inverse asymmetry proxy, smoothness, path length, action norm, passive likelihood proxy, and random score.
 
 \begin{table}[t]
 \centering
@@ -28,13 +35,20 @@ For each candidate, we compute residuals, recover controls, roll out the true en
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.9\linewidth]{figures/fig4_failure_prediction.pdf}
-\caption{Actionability residuals correlate with rollout error and produce monotone failure-rate curves across embodiments.}
-\label{fig:failure}
+\includegraphics[width=0.76\linewidth]{figures/fig3_hostile_baselines.pdf}
+\caption{Hostile baseline comparison. A learned classifier can pattern-fit this synthetic benchmark, while actionability provides the mechanism-level certificate. Learned-J residuals recover most of the signal; smoothness and passive likelihood can prefer non-executable futures.}
+\label{fig:baselines}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/fig4_robustness_audit.pdf}
+\caption{Robustness audit over learned maps. Local Jacobian maps become reliable with modest data in smooth embodiments. The contact pusher remains the hard case because the reachable tangent set changes discontinuously with contact mode.}
+\label{fig:robustness}
 \end{figure}
 
 \paragraph{Experiment 3: repair.}
-We compare the original candidate, goal-only, world+goal, world+goal+smoothness, world+goal+actionability, and full energy variants. Adding actionability changes the trajectory rather than only rescoring it; it encourages futures whose local increments can be produced by bounded actions.
+We compare the original candidate, goal-only, world+goal, world+goal+smoothness, world+goal+actionability, full energy, learned-J full energy, noisy learned-J full energy, and wrong-map full energy. Adding actionability changes the trajectory rather than only rescoring it; it encourages futures whose local increments can be produced by bounded actions.
 
 \begin{table}[t]
 \centering
@@ -60,12 +74,12 @@ We score the same local $(dx,dy)$ displacement under different action maps. The 
 \label{fig:swap}
 \end{figure}
 
-\paragraph{Experiment 5: learned $J_\phi$.}
-We fit small local linear action maps from random rollouts and compare them to analytic Jacobians. Error decreases with sample count, but the pusher remains harder because contact discontinuities violate a single smooth local model.
+\paragraph{Experiment 5: visual/keypoint futures.}
+To avoid a purely state-space story, we render CPU keypoint representations for the car and pusher and compute residuals in keypoint space using finite-difference or learned visual Jacobians. This remains a controlled proxy rather than a large video model, but it tests the intended representation-level interface.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.52\linewidth]{figures/fig7_learned_jacobian.pdf}
-\caption{Sample efficiency of small local action-map models.}
-\label{fig:learnedj}
+\includegraphics[width=0.95\linewidth]{figures/fig8_visual_keypoint.pdf}
+\caption{CPU visual/keypoint futures. Actionability remains useful when $z$ is a rendered keypoint representation rather than the raw simulator state.}
+\label{fig:visual}
 \end{figure}

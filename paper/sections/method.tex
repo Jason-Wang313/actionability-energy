@@ -17,5 +17,12 @@ E(\tau)=E_{\mathrm{world}}(\tau)+\alpha E_{\mathrm{goal}}(\tau,g)+\beta\sum_{t=0
 \]
 $E_{\mathrm{world}}$ keeps the repaired trajectory near the proposed future, $E_{\mathrm{goal}}$ pulls the terminal state toward the task target, and $\sum_t r_t$ penalizes non-actionable local transitions. In this package, repair is implemented as projected trajectory inference: build a reachable rollout from local action projections or simple embodiment-aware controllers, then blend it with world and goal terms. This is intentionally CPU-first and should be read as a benchmark solver, not as a claim of optimal nonlinear trajectory optimization.
 
+\subsection{Learning the Action Map}
+The analytic Jacobian is not required. We collect small exploratory rollouts $(z_t,u_t,z_{t+1})$ and fit a local ridge model
+\[
+z_{t+1}-z_t\approx J_\phi(z_t)u_t.
+\]
+The same learned map is then used for three roles: inverse action recovery, residual-based failure diagnosis, and repair. This is the Lester/NJF-facing point of the paper: a Jacobian-style embodiment representation is useful not only as an inverse-control module, but also as an interface between imagined futures and embodied feasibility.
+
 \subsection{Embodiment Swapping}
 The same representation displacement can be paired with different $J_\phi$ maps. A sideways $(x,y)$ displacement has zero residual for a holonomic point mass but high residual for a car whose heading points forward. A pusher-object displacement is actionable only under contact. This makes actionability a property of a representation plus an embodiment, not a property of the visual future alone.

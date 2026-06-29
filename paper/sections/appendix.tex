@@ -7,7 +7,10 @@ For unconstrained actions, the solver uses the ridge projection closed form. For
 Candidates include true rollouts, straight-line paths, too-fast point-mass jumps, sideways car paths, Cartesian arm teleports, and object-motion-before-contact pusher paths. Labels are not assigned by construction; they are produced by recovering controls from the candidate and rolling out the environment.
 
 \paragraph{Repair solver.}
-The repair routine constructs a reachable trajectory from local action projections or embodiment-aware controllers and blends it with world, goal, and smoothness terms. This is a practical CPU solver for the benchmark. Future versions should compare against differentiable nonlinear trajectory optimization and learned video latent repair.
+The repair routine constructs a reachable trajectory from local action projections or embodiment-aware controllers and blends it with world, goal, and smoothness terms. The upgraded experiments evaluate analytic, learned, noisy learned, and wrong-map repair variants. This is a practical CPU solver for the benchmark. Future versions should compare against differentiable nonlinear trajectory optimization and learned video latent repair.
+
+\paragraph{Visual/keypoint representation.}
+The visual experiment renders compact keypoint states for the car and pusher. It is not a learned video generator, but it tests whether the residual can be evaluated in a representation that is closer to a visual future than raw simulator coordinates.
 
 \paragraph{Novelty boundary.}
 The closest overlap found is World Action Verifier \citep{liu2026wav}. The present work should avoid claiming to be the first executable-video verifier. Its narrower claim is a tangent-space actionability residual, benchmark, and repair energy for local embodiment-conditioned generated futures.

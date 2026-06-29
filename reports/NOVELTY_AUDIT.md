@@ -23,14 +23,16 @@ World Action Verifier is the closest overlap. It studies executable generated fu
 
 ## Why Novelty Survives
 
-This project does not claim to be the first executable-video or inverse-dynamics verifier. Its narrower contribution is:
+The upgraded paper does not claim to be the first executable-video or inverse-dynamics verifier. Its narrower contribution is:
 
 1. A tangent-space residual measuring distance from an imagined representation transition to the local action-reachable set induced by `J_phi(z)`.
-2. A CPU benchmark isolating non-executable generated futures across four embodiment/action-map structures.
-3. An inference-time repair objective where actionability is a composable energy term.
-4. Embodiment swapping by changing the action map while keeping the same imagined displacement.
+2. A learned-Jacobian diagnostic-interface framing: the same local action map supports inverse action, failure diagnosis, and repair.
+3. A CPU benchmark isolating non-executable generated futures across four embodiment/action-map structures plus rendered keypoint futures.
+4. Hostile baselines: inverse-dynamics reconstruction, learned classifier, WAV-style proxy, wrong-map residuals, smoothness, passive likelihood, action norm, and path length.
+5. Robustness audits over sample count, Jacobian noise, wrong maps, and contact-mode mismatch.
+6. Embodiment swapping by changing the action map while keeping the same imagined displacement.
 
-The inspected prior work did not reveal the exact combination of local tangent-space certificate, low-compute diagnostic benchmark, and repair objective as implemented here.
+The inspected prior work did not reveal this exact combination of local tangent-space certificate, learned action-map diagnostic interface, low-compute benchmark, robustness audit, and repair objective.
 
 ## Claims To Avoid
 
@@ -39,8 +41,9 @@ The inspected prior work did not reveal the exact combination of local tangent-s
 - Do not claim real-robot validation.
 - Do not claim the repair solver is a general nonlinear optimal-control method.
 - Do not claim state-of-the-art robot policy performance.
-- Do not call the toy future generators full video models.
+- Do not call the toy/keypoint future generators full video models.
+- Do not claim learned smooth Jacobians solve contact; the pusher result shows they do not.
 
 ## Current Novelty Verdict
 
-Novelty survives as a bridge paper: it is a controlled representation/actionability study, not a full robot foundation-model result. It fits Jason's agenda as a robot-brain mechanism paper around action-conditioned world representations, failure diagnosis, repair, and embodiment transfer.
+Novelty survives more strongly as a Lester-aligned bridge paper. It is a controlled representation/actionability study, not a full robot foundation-model result. It fits Jason's agenda as a robot-brain mechanism paper around learned action maps, failure diagnosis, repair, and embodiment transfer. The main novelty-risk boundary remains WAV/EVA; the paper must continue to frame actionability as a tangent-space certificate and repair factor, not as first executable-video verification.

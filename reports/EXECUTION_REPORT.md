@@ -5,7 +5,7 @@ Machine timezone from thread context: Asia/Shanghai
 
 ## Status
 
-DONE local package: code, tests, experiments, figures, paper source, compiled PDF, reports, git commits, and public GitHub push are complete.
+Upgraded research package is complete locally on branch `learned-j-bulletproof` through full experiments, figures, paper rewrite, reports, final command-gate rerun, and PDF render check. Commit and GitHub push are performed after this final report edit.
 
 ## Repository
 
@@ -13,15 +13,16 @@ Local path: `C:\Users\wangz\actionability-energy`
 
 GitHub URL: `https://github.com/Jason-Wang313/actionability-energy`
 
+Working branch: `learned-j-bulletproof`
+
 ## Paper PDF
 
-Compiled PDF: `C:\Users\wangz\actionability-energy\paper\main.pdf`
+Compiled PDF target: `C:\Users\wangz\actionability-energy\paper\main.pdf`
 
 PDF render check:
 
-- Rendered page 1 with PyMuPDF to `reports/rendered/main_page1.png`.
-- Rendered page 4 with PyMuPDF to `reports/rendered/main_page4.png`.
-- Both sampled pages rendered nonblank and visually coherent.
+- Rendered page 1, page 2, and page 6 with PyMuPDF under `reports/rendered/`.
+- Sampled pages were nonblank and visually coherent.
 
 ## Hardware
 
@@ -45,54 +46,61 @@ PDF render check:
 
 ## Commands Run
 
-- `pytest -q` PASS.
+- `pytest -q` PASS, 8 tests.
 - `python experiments/run_all.py --quick` PASS.
 - `python experiments/run_all.py --full` PASS.
 - `bash scripts/make_plots.sh` PASS.
-- `bash scripts/compile_paper.sh` PASS after fallback.
+- `bash scripts/compile_paper.sh` PASS.
+- `python experiments/run_all.py --plots-only` PASS during figure QA.
 
-Git/GitHub:
+Compilation note: `latexmk` exists but MiKTeX cannot run it because Perl is missing. The compile script falls back to direct `pdflatex`/`bibtex`. The final log has no unresolved citations or references.
 
-- `git init` PASS.
-- Commits created:
-  - `init benchmark environments`
-  - `add experiments and metrics`
-  - `add paper draft and reports`
-- Public repository created and pushed: `https://github.com/Jason-Wang313/actionability-energy`.
-
-Compilation note: `latexmk` exists but MiKTeX cannot run it because Perl is missing. The script now falls back to direct `pdflatex`/`bibtex`, which produced `paper/main.pdf`.
-
-## Experiment Status
+## Upgraded Experiment Status
 
 Full run manifest:
 
 - Mode: full.
 - Candidate count: 360.
-- Figures expected: 7.
-- Figures generated: 7 PDF + 7 PNG.
+- Figures expected: 9.
 
-Main actionability residual failure-prediction results from `results/processed/failure_prediction_metrics.csv`:
+Main full-run metrics from `results/processed/failure_prediction_metrics.csv`:
 
-- nonholonomic_car: AUROC 1.000, AUPRC 1.000.
-- planar_pusher: AUROC 1.000, AUPRC 1.000.
-- point_mass: AUROC 1.000, AUPRC 1.000.
-- two_link_arm: AUROC 0.990, AUPRC 0.966.
-- all: AUROC 0.989, AUPRC 0.989.
+- learned classifier: AUROC 1.000, AUPRC 1.000. This is reported as synthetic-distribution pattern fitting, not mechanism.
+- analytic actionability residual: AUROC 0.989, AUPRC 0.989.
+- learned-J residual: AUROC 0.913, AUPRC 0.883.
+- noisy learned-J residual: AUROC 0.884, AUPRC 0.858.
+- inverse-dynamics reconstruction error: AUROC 0.883, AUPRC 0.883.
+- WAV-style proxy: AUROC 0.799, AUPRC 0.772.
+- wrong-map residual: AUROC 0.620, AUPRC 0.553.
+- smoothness: AUROC 0.426, AUPRC 0.426.
 
-Repair diagnostic cases from `results/processed/repair_results.csv`:
+Robustness audit at 512 transitions:
 
-- Full actionability energy repairs point_mass, nonholonomic_car, two_link_arm, and planar_pusher to successful recovered-control rollouts.
-- Smoothness-only variants help some geometry but do not reliably repair non-executability.
+- point_mass learned-J AUROC 1.000.
+- nonholonomic_car learned-J AUROC 0.985.
+- two_link_arm learned-J AUROC 0.948.
+- planar_pusher learned-J AUROC 0.604, exposing contact-mode discontinuity.
 
-Generated figures:
+Visual/keypoint futures:
 
-- `fig1_concept_actionability`
-- `fig2_geometry_projection`
-- `fig3_environment_grid`
-- `fig4_failure_prediction`
-- `fig5_repair_before_after`
-- `fig6_embodiment_swap`
-- `fig7_learned_jacobian`
+- car analytic visual actionability AUROC 1.000; learned visual actionability AUROC 0.961.
+- pusher analytic visual actionability AUROC 1.000; learned visual actionability AUROC 0.509, exposing contact-mode mismatch in visual representation space.
+
+Repair diagnostic cases:
+
+- Full actionability energy repairs point_mass, nonholonomic_car, two_link_arm, and planar_pusher in the analytic setting.
+- Upgraded repair table also includes learned-J, noisy learned-J, and wrong-map variants.
+
+Generated upgraded figures:
+
+- `fig1_concept_actionability`: main diagnostic-interface story.
+- `fig2_learned_j_interface`: learned map as inverse action, diagnosis, and repair.
+- `fig3_hostile_baselines`: hostile baseline comparison.
+- `fig4_robustness_audit`: sample/noise robustness grid.
+- `fig5_repair_before_after`: repair rollouts.
+- `fig6_embodiment_swap`: same dream, different body.
+- `fig7_learned_jacobian`: learned-J sample curve.
+- `fig8_visual_keypoint`: CPU visual/keypoint futures.
 
 ## Unresolved Issues
 
@@ -100,10 +108,11 @@ Generated figures:
 - No PushT/ManiSkill optional experiment.
 - Repair solver is projected and CPU-practical, not a full nonlinear optimizer.
 - Large-video-model future generation is represented by controlled proxy generators.
-- Figure quality is solid but would benefit from a design pass before a serious ICLR submission.
+- Learned pusher/contact results are weak; this is the main scientific failure mode and motivates active contact probing or mode-aware Jacobian fields.
+- Figures are substantially improved over v0 but could still benefit from a Figma/Illustrator pass against Yilun Du-style visual references.
 
 ## Submission Readiness
 
-Score: 6.5 / 10.
+Score: 7.2 / 10.
 
-The package is coherent and reproducible, with a clear novelty boundary and complete local artifacts. It is not yet a true ICLR-main submission because validation is toy-only and the repair solver is not as strong as the framing could support. As a bridge paper or workshop-quality seed for Jason's WAM/actionability agenda, it is in good shape.
+The upgraded package is a credible Lester/NJF/VERA-aligned mechanism paper: learned local action maps are central, hostile baselines are included, robustness audits are explicit, and visual/keypoint futures reduce the pure-state-space feel. It is still not a fully bulletproof ICLR-main submission because validation remains synthetic and the learned contact result exposes a real open problem.
