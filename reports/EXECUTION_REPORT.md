@@ -5,11 +5,13 @@ Machine timezone from thread context: Asia/Shanghai
 
 ## Status
 
-PARTIAL-to-DONE local package: code, tests, experiments, figures, paper source, compiled PDF, and reports are complete locally. GitHub push status is pending at the time this report was first written.
+DONE local package: code, tests, experiments, figures, paper source, compiled PDF, reports, git commits, and public GitHub push are complete.
 
 ## Repository
 
 Local path: `C:\Users\wangz\actionability-energy`
+
+GitHub URL: `https://github.com/Jason-Wang313/actionability-energy`
 
 ## Paper PDF
 
@@ -48,6 +50,15 @@ PDF render check:
 - `python experiments/run_all.py --full` PASS.
 - `bash scripts/make_plots.sh` PASS.
 - `bash scripts/compile_paper.sh` PASS after fallback.
+
+Git/GitHub:
+
+- `git init` PASS.
+- Commits created:
+  - `init benchmark environments`
+  - `add experiments and metrics`
+  - `add paper draft and reports`
+- Public repository created and pushed: `https://github.com/Jason-Wang313/actionability-energy`.
 
 Compilation note: `latexmk` exists but MiKTeX cannot run it because Perl is missing. The script now falls back to direct `pdflatex`/`bibtex`, which produced `paper/main.pdf`.
 
