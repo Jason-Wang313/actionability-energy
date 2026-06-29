@@ -1,0 +1,9 @@
+env,score,auroc,auprc
+nonholonomic_car,visual_actionability,1.0,1.0
+nonholonomic_car,learned_visual_actionability,0.9614197530864197,0.9751173184228772
+nonholonomic_car,visual_smoothness,0.4511316872427984,0.6676101700482978
+nonholonomic_car,visual_path_length,0.3863168724279836,0.5774287676094335
+planar_pusher,visual_actionability,1.0,1.0
+planar_pusher,learned_visual_actionability,0.5092592592592593,0.5623098345248225
+planar_pusher,visual_smoothness,0.3333333333333333,0.6619065272638359
+planar_pusher,visual_path_length,0.6388888888888888,0.7426626907234453
