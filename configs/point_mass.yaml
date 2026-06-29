@@ -1,0 +1,5 @@
+env: point_mass
+dt: 0.25
+max_speed: 1.0
+horizon_quick: 14
+horizon_full: 22

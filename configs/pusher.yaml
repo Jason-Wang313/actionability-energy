@@ -1,0 +1,6 @@
+env: planar_pusher
+dt: 0.18
+max_speed: 1.0
+contact_radius: 0.32
+horizon_quick: 14
+horizon_full: 22
