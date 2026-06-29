@@ -1,0 +1,21 @@
+\section{Actionability Energy}
+
+\subsection{One-Step Residual}
+Given a representation transition $\Delta z_t=z_{t+1}-z_t$ and local action map $J_\phi(z_t)\in\R^{d_z\times d_u}$, the unconstrained residual has the closed form
+\[
+u_t^\star=(J^\top WJ+\lambda I)^{-1}J^\top W\Delta z_t,
+\]
+\[
+r_t=\|\Delta z_t-Ju_t^\star\|_W^2+\lambda\|u_t^\star\|^2.
+\]
+When actions are box-bounded, $u\in[u_{\min},u_{\max}]$, the implementation solves the same quadratic program under bounds. Because the benchmark action spaces are one- and two-dimensional, we use an exact active-set enumeration for speed and keep a generic SciPy optimizer fallback for larger action spaces.
+
+\subsection{Trajectory Energy}
+For a candidate future $\tau=z_{0:T}$ and goal $g$, we compose
+\[
+E(\tau)=E_{\mathrm{world}}(\tau)+\alpha E_{\mathrm{goal}}(\tau,g)+\beta\sum_{t=0}^{T-1}r_t+\gamma E_{\mathrm{smooth}}(\tau)+\eta E_{\mathrm{constraints}}(\tau).
+\]
+$E_{\mathrm{world}}$ keeps the repaired trajectory near the proposed future, $E_{\mathrm{goal}}$ pulls the terminal state toward the task target, and $\sum_t r_t$ penalizes non-actionable local transitions. In this package, repair is implemented as projected trajectory inference: build a reachable rollout from local action projections or simple embodiment-aware controllers, then blend it with world and goal terms. This is intentionally CPU-first and should be read as a benchmark solver, not as a claim of optimal nonlinear trajectory optimization.
+
+\subsection{Embodiment Swapping}
+The same representation displacement can be paired with different $J_\phi$ maps. A sideways $(x,y)$ displacement has zero residual for a holonomic point mass but high residual for a car whose heading points forward. A pusher-object displacement is actionable only under contact. This makes actionability a property of a representation plus an embodiment, not a property of the visual future alone.

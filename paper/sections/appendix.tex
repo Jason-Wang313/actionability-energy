@@ -1,0 +1,13 @@
+\section{Additional Implementation Details}
+
+\paragraph{Residual solver.}
+For unconstrained actions, the solver uses the ridge projection closed form. For bounded actions, the benchmark uses exact active-set enumeration over low, free, and high states for each action coordinate. This is exact for the convex quadratic objective in the low-dimensional action spaces used here.
+
+\paragraph{Candidate generators.}
+Candidates include true rollouts, straight-line paths, too-fast point-mass jumps, sideways car paths, Cartesian arm teleports, and object-motion-before-contact pusher paths. Labels are not assigned by construction; they are produced by recovering controls from the candidate and rolling out the environment.
+
+\paragraph{Repair solver.}
+The repair routine constructs a reachable trajectory from local action projections or embodiment-aware controllers and blends it with world, goal, and smoothness terms. This is a practical CPU solver for the benchmark. Future versions should compare against differentiable nonlinear trajectory optimization and learned video latent repair.
+
+\paragraph{Novelty boundary.}
+The closest overlap found is World Action Verifier \citep{liu2026wav}. The present work should avoid claiming to be the first executable-video verifier. Its narrower claim is a tangent-space actionability residual, benchmark, and repair energy for local embodiment-conditioned generated futures.

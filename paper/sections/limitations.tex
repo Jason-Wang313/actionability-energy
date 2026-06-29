@@ -1,0 +1,3 @@
+\section{Limitations}
+
+The benchmark is toy-only and deterministic. It tests local representation-space feasibility, not real robot reliability. The repair solver is a CPU projected-inference routine, not a full nonlinear optimal-control solver. The residual is local and can be misleading when second-order effects, contact discontinuities, perception errors, or long-horizon compounding dominate. Learned Jacobians are evaluated with small local regressors rather than large neural fields. The pusher exposes mode switching, but it is not a physically faithful contact simulator. These limitations are intentional for a first low-compute diagnostic paper, but real robot validation would be required before making claims about deployment.

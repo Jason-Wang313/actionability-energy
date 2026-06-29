@@ -1,0 +1,30 @@
+\section{Theory: Plausibility Is Not Executability}
+
+\begin{proposition}[Passive plausibility does not imply actionability]
+There exist two trajectories $\tau_a,\tau_b$ with equal smoothness and equal terminal goal reward under a passive trajectory score, such that $\tau_a$ is locally actionable and $\tau_b$ has strictly positive actionability residual.
+\end{proposition}
+\begin{proof}
+Consider a nonholonomic car at $z_0=(0,0,0)$ with representation $(x,y,\theta)$ and local Jacobian
+\[
+J(z_0)=\begin{bmatrix}1&0\\0&0\\0&1\end{bmatrix}
+\]
+after absorbing the time step into units. Let $\tau_a$ use $\Delta z=(\epsilon,0,0)$ and $\tau_b$ use $\Delta z=(0,\epsilon,0)$ for $\epsilon>0$. Both one-step trajectories can have identical Euclidean length and identical passive smoothness, and a goal-only score can assign either transition the preferred terminal reward by placing the goal at the corresponding endpoint. For $\tau_a$, $\Delta z\in\operatorname{Im}(J)$, so the residual can be zero up to the ridge term. For $\tau_b$, the $y$ component is orthogonal to $\operatorname{Im}(J)$, so the residual is at least $\epsilon^2$ for $W=I$ and $\lambda=0$. Thus passive plausibility and goal reward alone do not certify actionability.
+\end{proof}
+
+\begin{proposition}[Residual lower-bounds local execution error]
+Assume local dynamics in representation space satisfy
+\[
+z_{t+1}=z_t+J(z_t)u_t+\rho(u_t),\quad \|\rho(u_t)\|\le c\|u_t\|^2
+\]
+for bounded $u_t$. Let $r_t^0=\min_{u\in\U}\|\Delta z_t-J(z_t)u\|_2^2$ be the unregularized residual. Then any one-step execution attempting to realize $\Delta z_t$ has representation error at least $\sqrt{r_t^0}-c\|u_t\|^2$.
+\end{proposition}
+\begin{proof}
+For any feasible $u_t$,
+\[
+\|\Delta z_t-(J u_t+\rho(u_t))\|_2
+\ge \|\Delta z_t-Ju_t\|_2-\|\rho(u_t)\|_2.
+\]
+By definition, $\|\Delta z_t-Ju_t\|_2\ge\sqrt{r_t^0}$ for every feasible action. Applying the second-order bound on $\rho$ gives the result. The bound is local: if actions are large or contact modes switch, the second-order term can dominate.
+\end{proof}
+
+These propositions justify using the residual as a diagnostic rather than as a complete dynamics model. The residual detects local tangent-set mismatch; it does not prove long-horizon feasibility under arbitrary nonlinear dynamics.

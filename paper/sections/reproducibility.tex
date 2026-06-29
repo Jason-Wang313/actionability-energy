@@ -1,0 +1,11 @@
+\section{Reproducibility Statement}
+
+All experiments are CPU-first Python scripts. The repository includes environment code, residual solvers, repair routines, tests, raw CSV results, plotting scripts, and LaTeX source. The intended verification commands are:
+\begin{verbatim}
+pytest -q
+python experiments/run_all.py --quick
+python experiments/run_all.py --full
+bash scripts/make_plots.sh
+bash scripts/compile_paper.sh
+\end{verbatim}
+The generated reports record command status, dependency versions, hardware, unresolved issues, and readiness level.
