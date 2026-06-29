@@ -23,13 +23,14 @@ def _smoothness(traj: np.ndarray) -> float:
     return float(np.sum(second * second))
 
 
-def actionability_energy(env, traj: np.ndarray, lam: float = 1e-4) -> float:
+def actionability_energy(env, traj: np.ndarray, lam: float = 1e-4, jacobian_fn=None) -> float:
     low, high = env.action_bounds
     total = 0.0
+    j_fn = jacobian_fn or env.jacobian
     for t in range(len(traj) - 1):
         out = solve_actionability(
             traj[t + 1] - traj[t],
-            env.jacobian(traj[t]),
+            j_fn(traj[t]),
             lam=lam,
             bounds=(low, high),
         )
@@ -41,7 +42,7 @@ def _clip_action(env, u: np.ndarray) -> np.ndarray:
     return np.clip(np.asarray(u, dtype=float), env.action_bounds[0], env.action_bounds[1])
 
 
-def _reachable_rollout(env, start: np.ndarray, goal: np.ndarray, T: int) -> np.ndarray:
+def _reachable_rollout(env, start: np.ndarray, goal: np.ndarray, T: int, jacobian_fn=None) -> np.ndarray:
     """Construct a fast feasible trajectory with simple embodiment-aware control."""
 
     name = getattr(env, "name", "")
@@ -76,7 +77,8 @@ def _reachable_rollout(env, start: np.ndarray, goal: np.ndarray, T: int) -> np.n
             u = _clip_action(env, desired_vel)
         else:
             desired_delta = (goal - z) / remaining
-            out = solve_actionability(desired_delta, env.jacobian(z), bounds=env.action_bounds, lam=1e-4)
+            j_fn = jacobian_fn or env.jacobian
+            out = solve_actionability(desired_delta, j_fn(z), bounds=env.action_bounds, lam=1e-4)
             u = out.u
         z = env.step(z, u)
         traj.append(z.copy())
@@ -92,15 +94,15 @@ def _smooth_once(traj: np.ndarray, strength: float) -> np.ndarray:
     return out
 
 
-def _composed_energy(env, traj: np.ndarray, candidate: np.ndarray, goal: np.ndarray, cfg: RepairConfig) -> float:
+def _composed_energy(env, traj: np.ndarray, candidate: np.ndarray, goal: np.ndarray, cfg: RepairConfig, jacobian_fn=None) -> float:
     world = cfg.world_weight * float(np.sum((traj - candidate) ** 2))
     goal_cost = cfg.alpha_goal * float(np.sum((traj[-1] - goal) ** 2))
-    action_cost = cfg.beta_actionability * actionability_energy(env, traj, cfg.lam_action)
+    action_cost = cfg.beta_actionability * actionability_energy(env, traj, cfg.lam_action, jacobian_fn=jacobian_fn)
     smooth = cfg.gamma_smoothness * _smoothness(traj)
     return world + goal_cost + action_cost + smooth
 
 
-def repair_trajectory(env, candidate: np.ndarray, goal: np.ndarray, config: RepairConfig | None = None) -> tuple[np.ndarray, dict]:
+def repair_trajectory(env, candidate: np.ndarray, goal: np.ndarray, config: RepairConfig | None = None, jacobian_fn=None) -> tuple[np.ndarray, dict]:
     """Repair intermediate states by fast projected trajectory inference."""
 
     cfg = config or RepairConfig()
@@ -108,13 +110,13 @@ def repair_trajectory(env, candidate: np.ndarray, goal: np.ndarray, config: Repa
     goal = np.asarray(goal, dtype=float)
     start = candidate[0].copy()
     T, dim = candidate.shape
-    initial_energy = _composed_energy(env, candidate, candidate, goal, cfg)
+    initial_energy = _composed_energy(env, candidate, candidate, goal, cfg, jacobian_fn=jacobian_fn)
     if cfg.beta_actionability <= 1e-12:
         repaired = candidate.copy()
         goal_pull = cfg.alpha_goal / (cfg.alpha_goal + cfg.world_weight + 1e-8)
         repaired[-1] = (1.0 - goal_pull) * repaired[-1] + goal_pull * goal
     else:
-        reachable = _reachable_rollout(env, start, goal, T)
+        reachable = _reachable_rollout(env, start, goal, T, jacobian_fn=jacobian_fn)
         action_blend = cfg.beta_actionability / (cfg.beta_actionability + cfg.world_weight + 1.0)
         repaired = (1.0 - action_blend) * candidate + action_blend * reachable
         repaired[0] = start
@@ -126,7 +128,7 @@ def repair_trajectory(env, candidate: np.ndarray, goal: np.ndarray, config: Repa
         if cfg.alpha_goal > 0:
             pull = 0.02 if cfg.beta_actionability > 0 else 0.12
             repaired[-1] = (1.0 - pull) * repaired[-1] + pull * goal
-    final_energy = _composed_energy(env, repaired, candidate, goal, cfg)
+    final_energy = _composed_energy(env, repaired, candidate, goal, cfg, jacobian_fn=jacobian_fn)
     info = {
         "success": bool(final_energy <= initial_energy or cfg.beta_actionability > 0),
         "message": "projected actionability repair",

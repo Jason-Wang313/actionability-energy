@@ -7,6 +7,9 @@ from sklearn.metrics import average_precision_score, roc_auc_score
 def safe_auc(y_true: np.ndarray, score: np.ndarray) -> float:
     y_true = np.asarray(y_true).astype(int)
     score = np.asarray(score, dtype=float)
+    mask = np.isfinite(score)
+    y_true = y_true[mask]
+    score = score[mask]
     if len(np.unique(y_true)) < 2:
         return float("nan")
     return float(roc_auc_score(y_true, score))
@@ -15,6 +18,9 @@ def safe_auc(y_true: np.ndarray, score: np.ndarray) -> float:
 def safe_auprc(y_true: np.ndarray, score: np.ndarray) -> float:
     y_true = np.asarray(y_true).astype(int)
     score = np.asarray(score, dtype=float)
+    mask = np.isfinite(score)
+    y_true = y_true[mask]
+    score = score[mask]
     if len(np.unique(y_true)) < 2:
         return float("nan")
     return float(average_precision_score(y_true, score))
@@ -48,6 +54,9 @@ def calibration_bins(y_true: np.ndarray, score: np.ndarray, bins: int = 8) -> li
 def threshold_accuracy(y_true: np.ndarray, score: np.ndarray) -> float:
     y_true = np.asarray(y_true).astype(int)
     score = np.asarray(score, dtype=float)
+    mask = np.isfinite(score)
+    y_true = y_true[mask]
+    score = score[mask]
     if len(score) == 0:
         return float("nan")
     thresh = float(np.median(score))

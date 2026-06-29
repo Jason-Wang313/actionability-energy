@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from actionability.jacobians import InverseDynamicsKNN, LocalLinearJacobian, collect_rollout_jacobian_data, corrupted_jacobian, noisy_jacobian, recommended_local_j_params
 from actionability.residuals import solve_actionability
 from actionability.repair import RepairConfig, repair_trajectory
 from envs import NonholonomicCarEnv, PlanarPusherEnv, PointMassEnv, TwoLinkArmEnv, make_envs
@@ -22,14 +23,15 @@ def smoothness_score(traj: np.ndarray) -> float:
     return float(np.sum(second * second))
 
 
-def rollout_with_recovered_controls(env, traj: np.ndarray) -> dict:
+def rollout_with_recovered_controls(env, traj: np.ndarray, jacobian_fn=None) -> dict:
     low, high = env.action_bounds
+    j_fn = jacobian_fn or env.jacobian
     z = np.asarray(traj[0], dtype=float).copy()
     rollout = [z.copy()]
     residuals, controls, action_norms = [], [], []
     for t in range(len(traj) - 1):
         delta = traj[t + 1] - traj[t]
-        out = solve_actionability(delta, env.jacobian(traj[t]), bounds=(low, high), lam=1e-4)
+        out = solve_actionability(delta, j_fn(traj[t]), bounds=(low, high), lam=1e-4)
         controls.append(out.u)
         residuals.append(out.residual)
         action_norms.append(float(np.linalg.norm(out.u)))
@@ -51,6 +53,76 @@ def rollout_with_recovered_controls(env, traj: np.ndarray) -> dict:
         "xy_error": float(np.mean(xy_err) + xy_err[-1]),
         "success": bool(xy_err[-1] < env.success_threshold and np.mean(xy_err) < env.success_threshold),
     }
+
+
+def residual_score(env, traj: np.ndarray, jacobian_fn=None, noise_scale: float = 0.0, seed: int = 0) -> float:
+    rng = np.random.default_rng(seed)
+    j_fn = jacobian_fn or env.jacobian
+    low, high = env.action_bounds
+    total = 0.0
+    for t in range(len(traj) - 1):
+        J = j_fn(traj[t])
+        if noise_scale > 0:
+            J = noisy_jacobian(J, noise_scale, rng)
+        total += solve_actionability(traj[t + 1] - traj[t], J, bounds=(low, high), lam=1e-4).residual
+    return float(total)
+
+
+def inverse_dynamics_reconstruction_error(env, traj: np.ndarray, inverse_model: InverseDynamicsKNN) -> float:
+    errs = []
+    low, high = env.action_bounds
+    for t in range(len(traj) - 1):
+        delta = traj[t + 1] - traj[t]
+        u = np.clip(inverse_model.predict(traj[t], delta), low, high)
+        pred_delta = env.step(traj[t], u) - traj[t]
+        errs.append(float(np.sum((delta - pred_delta) ** 2)))
+    return float(np.sum(errs))
+
+
+def wav_proxy_score(env, traj: np.ndarray, learned_j_model, inverse_model: InverseDynamicsKNN) -> float:
+    """Cheap forward-inverse asymmetry proxy inspired by executable-video verifiers."""
+
+    low, high = env.action_bounds
+    total = 0.0
+    for t in range(len(traj) - 1):
+        delta = traj[t + 1] - traj[t]
+        u_inv = np.clip(inverse_model.predict(traj[t], delta), low, high)
+        delta_forward = learned_j_model.predict(traj[t]) @ u_inv
+        inverse_delta = learned_j_model.predict(traj[t]) @ solve_actionability(
+            delta,
+            learned_j_model.predict(traj[t]),
+            bounds=(low, high),
+            lam=1e-4,
+        ).u
+        total += float(np.sum((delta - delta_forward) ** 2) + 0.25 * np.sum((delta_forward - inverse_delta) ** 2))
+    return float(total)
+
+
+def aggregate_candidate_features(env, traj: np.ndarray, learned_j_model=None, inverse_model=None, seed: int = 0) -> dict:
+    analytic = rollout_with_recovered_controls(env, traj)
+    row = {
+        "actionability_residual": analytic["actionability_residual"],
+        "mean_residual": analytic["mean_residual"],
+        "action_norm": analytic["action_norm"],
+        "smoothness": smoothness_score(traj),
+        "path_length": float(np.sum(np.linalg.norm(np.diff(env.plot_xy(traj), axis=0), axis=1))),
+    }
+    row["passive_nll"] = row["smoothness"] + 0.03 * row["path_length"]
+    row["random_score"] = float(np.random.default_rng(seed).random())
+    if learned_j_model is not None:
+        row["learned_j_residual"] = residual_score(env, traj, jacobian_fn=learned_j_model.predict)
+        row["noisy_j_residual"] = residual_score(env, traj, jacobian_fn=learned_j_model.predict, noise_scale=0.35, seed=seed + 10)
+    else:
+        row["learned_j_residual"] = np.nan
+        row["noisy_j_residual"] = np.nan
+    row["wrong_j_residual"] = residual_score(env, traj, jacobian_fn=lambda z: corrupted_jacobian(env, z))
+    if learned_j_model is not None and inverse_model is not None:
+        row["idm_reconstruction_error"] = inverse_dynamics_reconstruction_error(env, traj, inverse_model)
+        row["wav_proxy"] = wav_proxy_score(env, traj, learned_j_model, inverse_model)
+    else:
+        row["idm_reconstruction_error"] = np.nan
+        row["wav_proxy"] = np.nan
+    return row
 
 
 def _scripted_rollout(env, start: np.ndarray, controls: np.ndarray) -> np.ndarray:
@@ -124,7 +196,7 @@ def candidate_trajectories(env, n: int, T: int, seed: int) -> list[dict]:
     return out
 
 
-def score_candidates(env, n: int, T: int, seed: int) -> tuple[pd.DataFrame, dict]:
+def score_candidates(env, n: int, T: int, seed: int, learned_j_model=None, inverse_model=None) -> tuple[pd.DataFrame, dict]:
     rows = []
     example = None
     for idx, item in enumerate(candidate_trajectories(env, n, T, seed)):
@@ -136,16 +208,10 @@ def score_candidates(env, n: int, T: int, seed: int) -> tuple[pd.DataFrame, dict
             "kind": item["kind"],
             "failure": int(not ev["success"]),
             "success": int(ev["success"]),
-            "actionability_residual": ev["actionability_residual"],
-            "mean_residual": ev["mean_residual"],
             "rollout_error": ev["rollout_error"],
             "xy_error": ev["xy_error"],
-            "action_norm": ev["action_norm"],
-            "smoothness": smoothness_score(traj),
-            "path_length": float(np.sum(np.linalg.norm(np.diff(env.plot_xy(traj), axis=0), axis=1))),
-            "random_score": float(np.random.default_rng(seed + idx).random()),
         }
-        row["passive_nll"] = row["smoothness"] + 0.03 * row["path_length"]
+        row.update(aggregate_candidate_features(env, traj, learned_j_model=learned_j_model, inverse_model=inverse_model, seed=seed + idx))
         rows.append(row)
         if example is None and row["failure"] == 1:
             example = {
@@ -194,7 +260,11 @@ def run_repair_suite(T: int, seed: int) -> tuple[pd.DataFrame, dict]:
     }
     rows = []
     plot_payload = {}
-    for env in make_envs():
+    quick = T <= 14
+    for env_idx, env in enumerate(make_envs()):
+        z_train, u_train, d_train = collect_rollout_jacobian_data(env, 180 if quick else 700, seed=seed + 200 * env_idx, action_scale=0.35)
+        k, length_scale = recommended_local_j_params(env, len(z_train))
+        learned_j = LocalLinearJacobian(k=k, length_scale=length_scale).fit(z_train, u_train, d_train)
         before = _repair_case(env, T)
         before_eval = rollout_with_recovered_controls(env, before)
         rows.append(
@@ -223,6 +293,33 @@ def run_repair_suite(T: int, seed: int) -> tuple[pd.DataFrame, dict]:
                 }
             )
             if name == "full_energy":
+                best_after = repaired
+                best_eval = ev
+        full_cfg = configs["full_energy"]
+        learned_variants = {
+            "learned_j_full": learned_j.predict,
+            "wrong_j_full": lambda z, env=env: corrupted_jacobian(env, z),
+        }
+        noisy_rng = np.random.default_rng(seed + 900 + env_idx)
+
+        def noisy_fn(z, model=learned_j, rng=noisy_rng):
+            return noisy_jacobian(model.predict(z), 0.35, rng)
+
+        learned_variants["noisy_learned_j_full"] = noisy_fn
+        for name, j_fn in learned_variants.items():
+            repaired, info = repair_trajectory(env, before, before[-1], full_cfg, jacobian_fn=j_fn)
+            ev = rollout_with_recovered_controls(env, repaired, jacobian_fn=j_fn)
+            rows.append(
+                {
+                    "env": env.name,
+                    "variant": name,
+                    "residual": ev["actionability_residual"],
+                    "rollout_error": ev["rollout_error"],
+                    "success": int(ev["success"]),
+                    "energy_drop": info["initial_energy"] - info["final_energy"],
+                }
+            )
+            if name == "learned_j_full":
                 best_after = repaired
                 best_eval = ev
         plot_payload[env.name] = {

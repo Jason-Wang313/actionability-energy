@@ -21,13 +21,19 @@ from actionability.plotting import (
     environment_grid,
     failure_prediction_plot,
     geometry_projection,
+    hostile_baseline_plot,
+    learned_interface_figure,
     learned_j_curve,
     repair_plot,
+    robustness_grid_plot,
+    visual_keypoint_plot,
 )
 from experiments.exp_embodiment_swap import run_embodiment_swap
 from experiments.exp_failure_prediction import run_failure_prediction
 from experiments.exp_learned_jacobian import run_learned_jacobian
 from experiments.exp_repair import run_repair_experiment
+from experiments.exp_robustness import run_robustness
+from experiments.exp_visual_keypoint import run_visual_keypoint
 
 
 RAW = ROOT / "results" / "raw"
@@ -54,6 +60,16 @@ def _write_table_for_latex(metrics: pd.DataFrame, repair: pd.DataFrame) -> None:
         for env, row in pivot.iterrows():
             f.write(f"{env.replace('_', ' ')} & {row.get('candidate', 0):.0f} & {row.get('full_energy', 0):.0f}\\\\\n")
         f.write("\\bottomrule\\end{tabular}\n")
+    baseline = metrics[metrics["env"] == "all"].copy()
+    if len(baseline):
+        baseline["score"] = baseline["score"].str.replace("_", " ", regex=False)
+        baseline = baseline.sort_values("auroc", ascending=False)
+        with (table_dir / "hostile_baselines.tex").open("w", encoding="utf-8") as f:
+            f.write("\\begin{tabular}{lcc}\\toprule\n")
+            f.write("Score & AUROC & AUPRC\\\\\\midrule\n")
+            for _, row in baseline.iterrows():
+                f.write(f"{row['score']} & {row['auroc']:.3f} & {row['auprc']:.3f}\\\\\n")
+            f.write("\\bottomrule\\end{tabular}\n")
 
 
 def _save_repair_npz(payload: dict, path: Path) -> None:
@@ -73,6 +89,9 @@ def make_plots() -> None:
     repair_npz = RAW / "repair_trajectories.npz"
     swap_path = RAW / "embodiment_swap.csv"
     learned_path = RAW / "learned_jacobian.csv"
+    robustness_path = PROCESSED / "robustness_metrics.csv"
+    visual_scores_path = RAW / "visual_keypoint_scores.csv"
+    visual_examples_path = RAW / "visual_keypoint_examples.npz"
     examples_path = RAW / "environment_examples.npz"
     if scores_path.exists():
         failure_prediction_plot(pd.read_csv(scores_path), FIGS / "fig4_failure_prediction")
@@ -82,6 +101,14 @@ def make_plots() -> None:
         embodiment_heatmap(pd.read_csv(swap_path), FIGS / "fig6_embodiment_swap")
     if learned_path.exists():
         learned_j_curve(pd.read_csv(learned_path), FIGS / "fig7_learned_jacobian")
+        learned_interface_figure(pd.read_csv(learned_path), FIGS / "fig2_learned_j_interface")
+    metrics_path = PROCESSED / "failure_prediction_metrics.csv"
+    if metrics_path.exists():
+        hostile_baseline_plot(pd.read_csv(metrics_path), FIGS / "fig3_hostile_baselines")
+    if robustness_path.exists():
+        robustness_grid_plot(pd.read_csv(robustness_path), FIGS / "fig4_robustness_audit")
+    if visual_scores_path.exists() and visual_examples_path.exists():
+        visual_keypoint_plot(pd.read_csv(visual_scores_path), visual_examples_path, FIGS / "fig8_visual_keypoint")
     if examples_path.exists():
         data = np.load(examples_path, allow_pickle=True)
         examples = {}
@@ -126,12 +153,23 @@ def run(mode: str, plots_only: bool = False) -> None:
         swap.to_csv(RAW / "embodiment_swap.csv", index=False)
         learned = run_learned_jacobian(seed=123, quick=quick)
         learned.to_csv(RAW / "learned_jacobian.csv", index=False)
+        robust_scores, robust_metrics = run_robustness(seed=321, quick=quick)
+        robust_scores.to_csv(RAW / "robustness_scores.csv", index=False)
+        robust_metrics.to_csv(PROCESSED / "robustness_metrics.csv", index=False)
+        visual_scores, visual_metrics, visual_examples = run_visual_keypoint(seed=555, quick=quick)
+        visual_scores.to_csv(RAW / "visual_keypoint_scores.csv", index=False)
+        visual_metrics.to_csv(PROCESSED / "visual_keypoint_metrics.csv", index=False)
+        visual_arrays = {"names": np.asarray(list(visual_examples.keys()), dtype=object)}
+        for name, item in visual_examples.items():
+            visual_arrays[f"{name}_state"] = item["state"]
+            visual_arrays[f"{name}_rep"] = item["rep"]
+        np.savez(RAW / "visual_keypoint_examples.npz", **visual_arrays)
         _write_table_for_latex(metrics, repair)
         manifest = {
             "mode": mode,
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "candidate_count": int(len(scores)),
-            "figures_expected": 7,
+            "figures_expected": 9,
         }
         (PROCESSED / "run_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     make_plots()

@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from actionability.jacobians import LocalLinearJacobian, collect_rollout_jacobian_data
+from actionability.jacobians import LocalLinearJacobian, collect_rollout_jacobian_data, recommended_local_j_params
 from envs import make_envs
 
 
@@ -11,11 +11,12 @@ def run_learned_jacobian(seed: int, quick: bool = False) -> pd.DataFrame:
     sample_sizes = [24, 64, 128] if quick else [32, 64, 128, 256, 512]
     rows = []
     for env_idx, env in enumerate(make_envs()):
-        z_train, u_train, d_train = collect_rollout_jacobian_data(env, max(sample_sizes), seed + env_idx)
+        z_train, u_train, d_train = collect_rollout_jacobian_data(env, max(sample_sizes), seed + env_idx, action_scale=0.35)
         rng = np.random.default_rng(seed + 1000 + env_idx)
         z_test = np.asarray([env.sample_state(rng) for _ in range(80 if quick else 160)])
         for n in sample_sizes:
-            model = LocalLinearJacobian(k=min(48, n), length_scale=0.65).fit(z_train[:n], u_train[:n], d_train[:n])
+            k, length_scale = recommended_local_j_params(env, n)
+            model = LocalLinearJacobian(k=k, length_scale=length_scale).fit(z_train[:n], u_train[:n], d_train[:n])
             errs = []
             norms = []
             for z in z_test:
