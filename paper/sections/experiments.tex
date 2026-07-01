@@ -35,20 +35,20 @@ For each candidate, we compute residuals, recover controls, roll out the true en
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.76\linewidth]{figures/fig3_hostile_baselines.pdf}
-\caption{Hostile baseline comparison. A learned classifier can pattern-fit this synthetic benchmark, while actionability provides the mechanism-level certificate. Learned-J residuals recover most of the signal; smoothness and passive likelihood can prefer non-executable futures.}
+\includegraphics[width=0.95\linewidth]{figures/fig3_hostile_baselines.pdf}
+\caption{Hostile baseline comparison. Sparse grouped panels separate the learned pattern-fit result from the mechanism-level certificate. Learned-J residuals recover most of the actionability signal, while wrong maps and passive proxies lose the executability distinction.}
 \label{fig:baselines}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{figures/fig4_robustness_audit.pdf}
-\caption{Robustness audit over learned maps. Local Jacobian maps become reliable with modest data in smooth embodiments. The contact pusher remains the hard case because the reachable tangent set changes discontinuously with contact mode.}
+\caption{Robustness audit over learned maps. Local Jacobian maps become reliable with modest data in smooth embodiments, remain useful under noise, and expose wrong action maps. The contact pusher remains the hard case because the reachable tangent set changes discontinuously with contact mode.}
 \label{fig:robustness}
 \end{figure}
 
 \paragraph{Experiment 3: repair.}
-We compare the original candidate, goal-only, world+goal, world+goal+smoothness, world+goal+actionability, full energy, learned-J full energy, noisy learned-J full energy, and wrong-map full energy. Adding actionability changes the trajectory rather than only rescoring it; it encourages futures whose local increments can be produced by bounded actions.
+We compare the original candidate and goal-only, world+goal, smoothness-regularized, actionability-regularized, full-energy, learned-J, noisy learned-J, and wrong-map repair variants. Adding actionability changes the trajectory rather than only rescoring it; it encourages futures whose local increments can be produced by bounded actions.
 
 \begin{table}[t]
 \centering
@@ -60,7 +60,7 @@ We compare the original candidate, goal-only, world+goal, world+goal+smoothness,
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{figures/fig5_repair_before_after.pdf}
-\caption{Before/after repair examples. Solid lines show imagined futures; dashed lines show rollouts from recovered controls.}
+\caption{Before/after repair examples. Each card shows a non-executable future, its repaired future, and the rollout recovered from local controls. The repaired trajectories substantially reduce execution mismatch.}
 \label{fig:repair}
 \end{figure}
 
@@ -70,7 +70,7 @@ We score the same local $(dx,dy)$ displacement under different action maps. The 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{figures/fig6_embodiment_swap.pdf}
-\caption{Embodiment swap heatmaps. The same representation displacement can be actionable for one body and non-actionable for another.}
+\caption{Embodiment swap residual fields. The same representation displacement can be actionable for one body and non-actionable for another. Low residual regions now show the feasible tangent structure without collapsing into unreadable black regions.}
 \label{fig:swap}
 \end{figure}
 
@@ -80,6 +80,6 @@ To avoid a purely state-space story, we render CPU keypoint representations for 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{figures/fig8_visual_keypoint.pdf}
-\caption{CPU visual/keypoint futures. Actionability remains useful when $z$ is a rendered keypoint representation rather than the raw simulator state.}
+\caption{CPU visual/keypoint futures. Actionability remains useful when $z$ is a rendered keypoint representation rather than the raw simulator state. The visual examples and score panel are separated to make the proxy evidence directly inspectable.}
 \label{fig:visual}
 \end{figure}
